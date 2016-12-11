@@ -15,17 +15,23 @@ px_right(2, :) = px_right(2, :) - disp_img(:)';
 num_keypoints = size(input_keypoints,2);
 index = zeros(1,num_keypoints);
 for k = 1:num_keypoints
-    row = ceil(input_keypoints(1,k));
-    column = ceil(input_keypoints(2,k));
-    index(k) = row+(column-1)*size(disp_img,1);
+    row = ceil(input_keypoints(2,k));
+    column = ceil(input_keypoints(1,k));
+    value = row+(column-1)*size(disp_img,1);
+    % Check if the value is already stored
+    if isempty(find(value==index(1:k), 1))
+        index(k) = value;
+    end
 end
-%debug
+% Take zeros out
+index = index(index~=0);
+
 positions = zeros(1,size(disp_img(:),1));
 index = index(disp_img(index)>0);
 positions(index) = 1; 
 positions = logical(positions);
-px_left = px_left(:, positions);
-px_right = px_right(:, positions);
+px_left = px_left(:, positions>0);
+px_right = px_right(:, positions>0);
 
 % Switch from (row, col, 1) to (u, v, 1)
 px_left(1:2, :) = flipud(px_left(1:2,:)); 
