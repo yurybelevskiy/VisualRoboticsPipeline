@@ -27,16 +27,16 @@ if use_stereo
     img_left = frame_1;
     img_right = frame_2;
     % Extraction of keypoints set in I0_left (Harris detector)
-    scores_left = harris(img_left,harris_patch_size,harris_kappa);
-    assert(min(size(scores_left) == size(img_left))); % Check-point
+%     scores_left = harris(img_left,harris_patch_size,harris_kappa);
+%     assert(min(size(scores_left) == size(img_left))); % Check-point
     % Select the best keypoints in the left image
-    keypoints_left = selectKeypoints(...
-        scores_left, num_keypoints, nonmaximum_supression_radius);
-% %     keypoints_left = detectHarrisFeatures(frame_1);
-% %     keypoints_left = keypoints_left.Location';
+%     keypoints_left = selectKeypoints(...
+%         scores_left, num_keypoints, nonmaximum_supression_radius);
+    keypoints_left = detectHarrisFeatures(frame_1);
+    keypoints_left = keypoints_left.Location';
     
     % Establish correspondences
-    disp_img = 0;%ourGetDisparity(img_left,img_right,patch_radius,min_disp,max_disp);
+    disp_img = ourGetDisparity(img_left,img_right,patch_radius,min_disp,max_disp);
     % 3D landmarks points (create right correspondence 2D-3D points)
     [p_W_landmarks, keypoints_left] = ourDisparityToPointCloud(...
         disp_img,K,baseline,img_left,keypoints_left);
