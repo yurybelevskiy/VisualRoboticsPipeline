@@ -15,11 +15,11 @@ px_right(2, :) = px_right(2, :) - disp_img(:)';
 num_keypoints = size(input_keypoints,2);
 index = zeros(1,num_keypoints);
 for k = 1:num_keypoints
-    row = input_keypoints(1,k);
-    column = input_keypoints(2,k);
+    row = ceil(input_keypoints(1,k));
+    column = ceil(input_keypoints(2,k));
     index(k) = row+(column-1)*size(disp_img,1);
 end
-
+%debug
 positions = zeros(1,size(disp_img(:),1));
 index = index(disp_img(index)>0);
 positions(index) = 1; 
