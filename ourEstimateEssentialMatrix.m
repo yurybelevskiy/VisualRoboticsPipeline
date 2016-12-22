@@ -9,7 +9,7 @@ function [E, inlier_mask] = ourEstimateEssentialMatrix(p1, p2, K1, K2)
 %  - K2(3,3): calibration matrix of camera 2
 %
 % Output:
-%  - E(3,3) : fundamental matrix
+%  - E(3,3) : essential matrix
 %
 
 [inlier_mask, F] = RANSAC_8pointAlg(p1,p2);

@@ -38,12 +38,8 @@ for i = 1:num_iterations
     p2_sample = p2(:, idx);
     
     F_est = fundamentalEightPoint_normalized(p1_sample,p2_sample);
-%     is_inlier = SampsonDistance(F_est,p1,p2,pixel_tolerance); % C'è la funzione nell'ese5
-%     F_est = fundamentalEightPoint_normalized(p1_sample,p2_sample);
-%     distance = distancesToEpiLine(F_est,p1,p2);
     distance = estimateDistanceEpipolarGeometry(F_est,p1,p2);
     is_inlier = distance < pixel_tolerance^2;
-%     [is_inlier, bestF] = estimateDistanceEpipolarGeometry(F_est, p1, p2, pixel_tolerance); 
     
     if nnz(is_inlier) > max_num_inliers && nnz(is_inlier) >= 6
         max_num_inliers = nnz(is_inlier);

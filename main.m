@@ -43,10 +43,10 @@ end
 % Stereo initialization
 frame_1 = imread([kitti_path '/00/image_0/000000.png']);
 % frame_2 = imread([kitti_path '/00/image_1/000000.png']); % stereo
-frame_2 = imread([kitti_path '/00/image_0/000003.png']); % mono
+frame_2 = imread([kitti_path '/00/image_0/000002.png']); % mono
 initial_state = InitializeVO(frame_1,frame_2,K);
 state = initial_state;
-%%
+
 % load('keyp.mat'); old_keypoints = keypoints'; load('p3D.mat'); p_W_landmarks = p_W_landmarks';
 % state = [old_keypoints; p_W_landmarks];
 % figure(1); old_pose = 1;
