@@ -1,5 +1,5 @@
 function scores = harris(img, patch_size, kappa)
-
+%%
 sobel_para = [-1 0 1];
 sobel_orth = [1 2 1];
 
