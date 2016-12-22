@@ -29,8 +29,8 @@ new_points = double(new_points(validity>0,:)');
 p_W_landmarks = p_W_landmarks(:,validity>0);
 
 % 2 - Camera pose estimation with P3P and RANSAC
-% Invert index from MatLab to our convenction
-new_points = [new_points(2,:); new_points(1,:)]; 
+% % % Invert index from MatLab to our convenction
+% % new_points = [new_points(2,:); new_points(1,:)]; 
 [R_C_W, t_C_W, inlier_mask] = ourRansacLocalization(new_points,...
     p_W_landmarks,K);
 new_points = new_points(:,inlier_mask>0);
