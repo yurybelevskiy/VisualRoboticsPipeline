@@ -10,6 +10,7 @@ function [R_C_W, t_C_W, inlier_mask] = ourRansacLocalization(...
 num_iterations = 200;
 pixel_tolerance = 10;
 k = 3;
+%RANDOM
 
 % Initialize RANSAC.
 inlier_mask = zeros(1, size(query_keypoints, 2));
