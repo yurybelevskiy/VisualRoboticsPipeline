@@ -3,9 +3,6 @@ function descriptors = ourDescribeKeypoints(img, keypoints, r)
 % img and a 2xN matrix containing the keypoint coordinates.
 % r is the patch "radius".
 
-% Invert index of keypoints from matlab to our convention
-keypoints = [keypoints(2,:); keypoints(1,:)];
-
 N = size(keypoints, 2);
 descriptors = uint8(zeros((2*r+1) ^ 2, N));
 padded = padarray(img, [r, r]);

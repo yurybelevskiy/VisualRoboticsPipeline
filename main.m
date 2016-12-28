@@ -41,24 +41,33 @@ else
 end
 
 % Stereo initialization
-frame_1 = imread([kitti_path '/00/image_0/000000.png']);
+frame_1 = imread([kitti_path '/00/image_0/000001.png']);
 % frame_2 = imread([kitti_path '/00/image_1/000000.png']); % stereo
-frame_2 = imread([kitti_path '/00/image_0/000002.png']); % mono
-initial_state = InitializeVO(frame_1,frame_2,K);
-state = initial_state;
+frame_2 = imread([kitti_path '/00/image_0/000003.png']); % mono
+[initial_state, pose_init] = InitializeVO(frame_1,frame_2,K);
+old_state = initial_state;
+old_pose = [pose_init; 0,0,0,1]; % goes from CF3 to CF1 -> invert it!
+old_pose = inv(old_pose);
 
-% load('keyp.mat'); old_keypoints = keypoints'; load('p3D.mat'); p_W_landmarks = p_W_landmarks';
-% state = [old_keypoints; p_W_landmarks];
-% figure(1); old_pose = 1;
-for k = 3:5
-    previous_image = imread(sprintf('%s/00/image_0/00000%d.png',kitti_path,k-1));
-    new_image = imread(sprintf('%s/00/image_0/00000%d.png',kitti_path,k));
-    [state,pose] = processFrame(state,previous_image,new_image,K);
-%     new_pose = pose*old_pose;
-%     old_pose = [new_pose; 0,0,0,1];
-%     plot(new_pose(2,1),new_pose(end,end),'o'); hold on;
+movement = zeros(1,2);
+P_old = old_pose(1:3,4);
+
+for k = 4:500
+    previous_image = imread(sprintf('%s/00/image_0/%06d.png',kitti_path,k-1));
+    new_image = imread(sprintf('%s/00/image_0/%06d.png',kitti_path,k));
+    [new_state,new_pose] = processFrame(old_state,previous_image,new_image,K);
+    
+    new_pose = inv([new_pose; 0,0,0,1]);
+    
+    [P_new, concatenated] = computeMovement(new_pose,old_pose,P_old);
+    P_old = P_new;
+    old_pose = concatenated;
+    movement(k-3,:) = [P_new(1), P_new(3)];
 end
 
+n = size(movement,1);
+figure
+plot(movement(:,1),movement(:,2),ground_truth(2:n+1,1),ground_truth(2:n+1,2));
 %% Bootstrap
 % need to set bootstrap_frames
 if ds == 0

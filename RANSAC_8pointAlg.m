@@ -35,7 +35,7 @@ for i = 1:num_iterations
     % Sample the points in the first frame and then find the correspondent
     % ones in the second frame.
     [p1_sample, idx] = datasample(p1, s, 2, 'Replace', false);
-    p2_sample = p2(:, idx);
+    p2_sample = p2(:,idx);
     
     F_est = fundamentalEightPoint_normalized(p1_sample,p2_sample);
     distance = estimateDistanceEpipolarGeometry(F_est,p1,p2);
@@ -56,7 +56,6 @@ if max_num_inliers == 0
     inlier_mask = [];
     best_F = [];
 end
-best_F
 
 end
 
