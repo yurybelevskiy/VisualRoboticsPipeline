@@ -21,7 +21,7 @@ function [ inlier_mask, best_F ] = RANSAC_8pointAlg( p1, p2 )
 p = 0.99;       % Probability that a sample is free from outliers
 e = 0.5;        % Probability that a point is an outlier
 s = 8;          % Number of point of correspondence
-num_iterations = log(1-p)/log(1-(1-e).^s);
+num_iterations = 2500;%log(1-p)/log(1-(1-e).^s);
 pixel_tolerance = 4;        % Hihger tolerance for initialization
 
 % Initilization and pre-allocation of the varibles

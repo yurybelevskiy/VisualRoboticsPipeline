@@ -50,24 +50,23 @@ old_pose = [pose_init; 0,0,0,1]; % goes from CF3 to CF1 -> invert it!
 old_pose = inv(old_pose);
 
 movement = zeros(1,2);
-P_old = old_pose(1:3,4);
+P_old = zeros(3,1);%old_pose(1:3,4);
 
-for k = 4:500
+for k = 4:8
     previous_image = imread(sprintf('%s/00/image_0/%06d.png',kitti_path,k-1));
     new_image = imread(sprintf('%s/00/image_0/%06d.png',kitti_path,k));
     [new_state,new_pose] = processFrame(old_state,previous_image,new_image,K);
     
     new_pose = inv([new_pose; 0,0,0,1]);
-    
     [P_new, concatenated] = computeMovement(new_pose,old_pose,P_old);
     P_old = P_new;
     old_pose = concatenated;
-    movement(k-3,:) = [P_new(1), P_new(3)];
+    movement(k-3,:) = [P_new(1), P_new(3)];    
 end
 
 n = size(movement,1);
 figure
-plot(movement(:,1),movement(:,2),ground_truth(2:n+1,1),ground_truth(2:n+1,2));
+plot(movement(:,1),movement(:,2),'-*',ground_truth(2:n+1,1),ground_truth(2:n+1,2),'-o');
 %% Bootstrap
 % need to set bootstrap_frames
 if ds == 0

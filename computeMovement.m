@@ -25,11 +25,6 @@ M = old_pose*new_pose;
 % Extract the new pose
 pose_concatenated = M(1:3,:);
 
-% % Compute the new position (homogenous coordinates)
-% p_new = M*p_old;
-% % Extract (x,y,z) of the new position
-% p_new = p_new(1:3);
-
 p_new = M(1:3,end);
 
 end

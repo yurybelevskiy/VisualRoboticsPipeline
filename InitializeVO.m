@@ -75,8 +75,8 @@ else
     p1_plot = keypoints_1;
     p2_plot = keypoints_2;
     % Invert order of rows to be consistent with the function of exe5
-    keypoints_1 = [keypoints_1(2,:); keypoints_1(1,:)];
-    keypoints_2 = [keypoints_2(2,:); keypoints_2(1,:)];
+    keypoints_1 = flipud(keypoints_1);
+    keypoints_2 = flipud(keypoints_2);
     % Plot of the matched features
     if debug_plot
         plotMatched(frame_1,p1_plot,p2_plot,false);
@@ -142,59 +142,16 @@ else
     W_T_c = [R_C2_W, T_C2_W];
     % Create the 4x4 matrix and shape it in a 16x1 vector. Repeat it for
     % every keypoint.
-    M = repmat(reshape([W_T_c; 0,0,0,1],16,1),1,size(key_h2,2));
-    state = [key_h2(1:2,:); p_W_landmarks; key_h2(1:2,:); M];
+    M = repmat(reshape(W_T_c,12,1),1,size(key_h2,2));
+    
+    % STATE:
+    % - keypoints in the initialization
+    % - 3D corresponding points
+    % - initialization of keypoints tracking for triangulation
+    % - Camera pose for each point
+%     state = [key_h2(1:2,:); p_W_landmarks; key_h2(1:2,:); M];
+    state = [[key_h2(1:2,:)', p_W_landmarks', M']; 
+        key_h2(1:2,:)', -ones(size(key_h2,2),3), M'];
   
-    %% DEBUGGING
-% % %     Parallel with matlab function
-% %     keypoints_1_m = detectHarrisFeatures(frame_1);
-% %     keypoints_1_m = keypoints_1_m.Location;
-% %     keypoints_2_m = detectHarrisFeatures(frame_2);
-% %     keypoints_2_m = keypoints_2_m.Location;
-% %     
-% %     [features1,valid_points1] = extractFeatures(frame_1,keypoints_1_m);
-% %     [features2,valid_points2] = extractFeatures(frame_2,keypoints_2_m);
-% %     indexPairs = matchFeatures(features1,features2);
-% %     matchedPoints1 = valid_points1(indexPairs(:,1),:);
-% %     matchedPoints2 = valid_points2(indexPairs(:,2),:);
-% %     F_matlab = estimateFundamentalMatrix(matchedPoints1,matchedPoints2)
-% %     E_m = K'*F_matlab*K
-% %     homo_points_1_m = [matchedPoints1,ones(max(size(matchedPoints1)),1)]';
-% %     homo_points_2_m = [matchedPoints2,ones(max(size(matchedPoints2)),1)]';
-% %     [Rots_m,t_m] = decomposeEssentialMatrix(E_m);
-% %     [R_C2_W_m,T_C2_W_m] = disambiguateRelativePose(Rots_m,t_m,homo_points_1_m,homo_points_2_m,K,K);
-% %     M1 = K * eye(3,4);                  % Camera 1
-% %     M2 = K * [R_C2_W_m, T_C2_W_m];      % Camera 2
-% %     p_W_landmarks_m = linearTriangulation(homo_points_2_m,homo_points_1_m,M2,M1);
-% %     
-% %     % Plot the 3d points
-% %     figure(4);
-% %     P = p_W_landmarks_m';
-% %     plot3(P(1,:), P(2,:), P(3,:), 'o'); grid on;
-% %     plotCoordinateFrame(eye(3),zeros(3,1), 0.8);
-% %     center_cam2_W = -R_C2_W_m'*T_C2_W_m;
-% %     plotCoordinateFrame(R_C2_W',center_cam2_W, 0.8);
-% %     text(center_cam2_W(1)-0.1, center_cam2_W(2)-0.1, center_cam2_W(3)-0.1,'Cam 2','fontsize',10,'color','k','FontWeight','bold');
-% %     axis equal
-% %     rotate3d on;
-% %     grid on;
-% %     
-% % 
-% % % % %     
-% % % % %     p1 = transformIntoHomogenous(keypoints_1); p1 = [p1, [1;1;1], [2;2;1], [3;3;1]];
-% % % % %     p2 = transformIntoHomogenous(keypoints_2);  p2 = [p2, [1240;1240;1], [1239;1240;1], [1238;1240;1]];
-% % % % %     [F_pk, inliers] = ransacfitfundmatrix(p1,p2,1);
-% % % % %     figure(3);
-% % % % %     plot_point1 = [p1(2,:)',p1(1,:)'];
-% % % % %     plot_point2 = [p2(2,:)',p2(1,:)'];
-% % % % %     showMatchedFeatures(frame_1,frame_2,plot_point1,plot_point2,'montage','PlotOptions',{'ro','go','y--'});hold on;
-% % % % %     p1 = p1(1:2,inliers); p2 = p2(1:2,inliers);
-% % % % %     plot_point1 = [p1(2,:)',p1(1,:)'];
-% % % % %     plot_point2 = [p2(2,:)',p2(1,:)'];
-% % % % %     showMatchedFeatures(frame_1,frame_2,plot_point1,plot_point2,'montage','PlotOptions',{'ro','go','c--'});
-% % % % %     title('With RANSAC');
-% % % % %     F_pk
 end
-
 end
-

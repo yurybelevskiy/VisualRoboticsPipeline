@@ -6,8 +6,6 @@ function [R_C_W, t_C_W, inlier_mask] = ourRansacLocalization(...
 % inlier_mask should be 1xnum_matched and contain, only for the
 %   matched keypoints, 0 if the match is an outlier, 1 otherwise.
 
-% Adapt to our convenction
-query_keypoints = [query_keypoints(2,:); query_keypoints(1,:)];
 % Parameters initialization.
 num_iterations = 200;
 pixel_tolerance = 10;
@@ -15,7 +13,6 @@ k = 3;
 
 % Initialize RANSAC.
 inlier_mask = zeros(1, size(query_keypoints, 2));
-query_keypoints = flipud(query_keypoints);
 max_num_inliers_history = zeros(1, num_iterations);
 max_num_inliers = 0;
 
