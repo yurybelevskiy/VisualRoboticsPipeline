@@ -52,7 +52,7 @@ old_pose = inv(old_pose);
 movement = zeros(1,2);
 P_old = zeros(3,1);%old_pose(1:3,4);
 
-for k = 4:8
+for k = 4:50
     previous_image = imread(sprintf('%s/00/image_0/%06d.png',kitti_path,k-1));
     new_image = imread(sprintf('%s/00/image_0/%06d.png',kitti_path,k));
     [new_state,new_pose] = processFrame(old_state,previous_image,new_image,K);

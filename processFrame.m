@@ -22,7 +22,7 @@ debug_triangulation = false;
 % 1 - Point tracking : KLT Algorihm with pyramidal scheme (3 levels)
 % % old_keypoints = old_state(1:2,:);
 % % p_W_landmarks = old_state(3:5,:);
-stop = find(old_state(:,3:5)==-1,1,'first')-1;
+stop = find(isnan(old_state(:,3:5)),1,'first')-1;
 old_keypoints = old_state(1:stop,1:2)';
 p_W_landmarks = old_state(1:stop,3:5)';
 
@@ -79,93 +79,82 @@ M_new = repmat(reshape(W_T_c,12,1),1,size(new_keypoints,2));
 % Put in the state only if the candidate keypoint is the first time.
 % Discard from the state what cannot be tracked anymore.
 
-% c_m_old = old_state(6:7,:)'; % track
-% old_pose = old_state(8:end,:);
-c_m_old = old_state(stop+1:end,1:2)'; % track
-old_pose = old_state(stop+1:end,6:end)';
-
-% Initialization step 3. 
+% Creation of the temporary state
+% Extract the 2D points + pose
+p_old = old_state(stop+1:end,1:2)';
+pose_old = old_state(stop+1:end,6:end)';
+% Compute new keypoints in frame I_current
 harris_patch_size = 9;
 harris_kappa = 0.08;
 num_keypoints = 300; % <---------- TO BE TUNED
 nonmaximum_supression_radius = 6;
 descriptor_radius = 9;
 match_lambda = 6; % <---------- TO BE TUNED PROPERLY FOR THE DESCRIPTOR MATCHING!!!!
-
 scores_m_new = harris(new_frame,harris_patch_size,harris_kappa);
-c_m_new = selectKeypoints(...
+p_new = selectKeypoints(...
     scores_m_new, num_keypoints, nonmaximum_supression_radius);
-
-% Track c_m_(i-1) in the frame I_i. Use descriptor matching (COULD WE USE
-% KLT? ANY IDEA?) and take only the ones that are matched.
-descriptors_m_new = describeKeypoints(new_frame,c_m_new,descriptor_radius);
-descriptors_m_old = describeKeypoints(old_frame,flipud(c_m_old),descriptor_radius);
+% Match the descriptors
+descriptors_m_new = describeKeypoints(new_frame,p_new,descriptor_radius);
+descriptors_m_old = describeKeypoints(old_frame,flipud(p_old),descriptor_radius);
 matches = matchDescriptors(descriptors_m_new,descriptors_m_old,match_lambda);
+% Divide the new candidate keypoints into matched and not-matched
+matched_new = flipud(p_new(:,matches>0));
+not_matched_new = flipud(p_new(:,matches==0));
+% Old points that have been tracked
+matched_old = p_old(:,matches(matches>0));
+matched_pose_old = pose_old(:,matches(matches>0));
+% State
+matched_pose_new = repmat(reshape(W_T_c,12,1),1,size(matched_new,2));
+not_matched_pose_new = repmat(reshape(W_T_c,12,1),1,size(not_matched_new,2));
+% state_temp = [new_keypoints',p_W_landmarks',M_new';
+%     matched_old', NaN(size(matched_old,2),3), pose_old';
+%     matched_new', NaN(size(matched_new,2),3), matched_pose_new';
+%     not_matched_new', NaN(size(not_matched_new,2),3), not_matched_pose_new'];
 
-% Keep only the matched ones (the old one, since we want to keep in memory
-% the fisrt track - mantain Markov property)
-c_m_old = c_m_old(:,matches(matches>0)); % old points - the start of the tracks
-M_old = old_pose(:,matches(matches>0))'; % correspondig poses of the initialization of tracks
-
-c_m_new_tri = c_m_new(:,matches>0); % points with valid matching
-
-if debug_triangulation
-    plotMatched(old_frame, flipud(c_m_old), c_m_new_tri, false);
-end
-
-% Choose only the points that can be triangulated
-angle_threshold = 1; % [°] how much???
-% angles = computeBearingAngle(c_m_old,c_m_new(:,matches>0),K);
-angles = computeBearingAngle(flipud(c_m_new_tri),c_m_old,K); %%
-M_triang_new = [R_C_W, t_C_W]; % this one is fixed, since it is the last step. It is the pose of last iteration.
-
-% Check if traingulation is possible
-if nnz(angles>angle_threshold) ~= 0
-    point_triang_old = c_m_old(:,angles>angle_threshold);
-    point_triang_new = c_m_new_tri(:,angles>angle_threshold);
-    M_triang_old = M_old(angles>angle_threshold,:);
-    key_h1 = [point_triang_old; ones(1,size(point_triang_old,2))];
-    key_h2 = [flipud(point_triang_new); ones(1,size(point_triang_new,2))];
-    p_W_landmarks_new = zeros(size(point_triang_old,2),4);
-    for i = 1:size(point_triang_old,2)
-        M1 = K*reshape(M_triang_old(i,:),3,4); % moltiplicare per K?!?
-        M2 = K*M_triang_new;
-        p_W_landmarks_new(i,:) = linearTriangulation(key_h1(:,i),key_h2(:,i),M1,M2)';
+% Check traingulation
+angle_tolerance = 2;
+angles = computeBearingAngle(matched_new,matched_old,K);
+if nnz(angles > angle_tolerance) ~= 0
+    % Find the point pairs that can be triangulated
+    idx = angles > angle_tolerance;
+    tri_matched_old = matched_old(:,idx);
+    tri_matched_new = matched_new(:,idx); 
+    tri_matched_pose_old = matched_pose_old(:,idx);
+    tri_matched_pose_new = matched_pose_new(:,idx);
+    tri_p_W = zeros(4,size(tri_matched_pose_old,2));
+    tri_matched_new_h = [tri_matched_new; ones(1,size(tri_matched_new,2))]; % Homogenous coordinates
+    tri_matched_old_h = [tri_matched_old; ones(1,size(tri_matched_old,2))]; % Homogenous coordinates
+    
+    for i = 1:size(tri_matched_pose_old,2)
+        tri_pose_old_temp = K*reshape(tri_matched_pose_old(:,i),3,4);%%%%%%%%%%
+        tri_pose_new_temp = K*reshape(tri_matched_pose_new(:,i),3,4);%%%%%%%%%%
+        tri_p_W(:,i) = linearTriangulation(tri_matched_old_h(:,i),...
+            tri_matched_new_h(:,i),tri_pose_old_temp,tri_pose_new_temp);
     end
-    idx = p_W_landmarks_new(:,3)>0;
-    p_W_landmarks_new = p_W_landmarks_new(idx,1:3);
-    c_m_new_tri = c_m_new_tri(:,idx);
-    c_m_old(:,angles>angle_threshold) = [];
-    M_old(angles>angle_threshold,:) = [];
+    % Discard negative depth
+    tri_p_W = tri_p_W(1:3,:); %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% no!!!!!!!!!
+    idx = find(tri_p_W(3,:)>0,1);
+    tri_p_W = tri_p_W(:,idx);
+    tri_matched_new = tri_matched_new(:,idx);
+    tri_matched_pose_new = tri_matched_pose_new(:,idx);
     
-    % to do: cancellare i punti triangolati
-    % cancellare z negative
-    % cancellare i punti 2d
-    
-    c_m_new = c_m_new(:,matches==0); % Correspondence now is lost
-    c_m = [c_m_old'; c_m_new'];
-    M_new = M_new';
-    M_new_m = repmat(reshape(W_T_c,12,1),1,size(c_m_new,2))';
-    new_state = [new_keypoints', p_W_landmarks', M_new;
-        c_m_new_tri', p_W_landmarks_new, M_new(1:size(c_m_new_tri,2),:);
-        c_m, -ones(size(c_m,1),3), [M_old; M_new_m]];
+    new_state = [new_keypoints',p_W_landmarks',M_new';
+        tri_matched_new', tri_p_W', tri_matched_pose_new';
+        matched_old', NaN(size(matched_pose_old,2),3), matched_pose_old';
+        not_matched_new', NaN(size(not_matched_new,2),3), not_matched_pose_new'];
 else
-
-% The other points are not tracked. However, we can keep the in memory. In
-% this way we can see if they can be tracked in the successive iteration.
-% If they are not tracked in the next step, they will be discarded.
-c_m_new = c_m_new(:,matches==0); % Correspondence now is lost
-
-% RANSAC? THEY WILL CONTAIN OUTLIERS
-c_m = [c_m_old'; c_m_new'];
+    new_state = [new_keypoints',p_W_landmarks',M_new';
+        matched_old', NaN(size(matched_pose_old,2),3), matched_pose_old';
+        not_matched_new', NaN(size(not_matched_new,2),3), not_matched_pose_new'];
+end
+    
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Intermediate output for part 1&2
-M_new = M_new';
-M_new_m = repmat(reshape(W_T_c,12,1),1,size(c_m_new,2))';
-new_state = [new_keypoints', p_W_landmarks', M_new;
-    c_m, -ones(size(c_m,1),3), [M_old; M_new_m]];
+% M_new = M_new';
+% M_new_m = repmat(reshape(W_T_c,12,1),1,size(p_new,2))';
+% new_state = [new_keypoints', p_W_landmarks', M_new;
+%     c_m, -ones(size(c_m,1),3), [M_old; M_new_m]];
 end
 
-end
 

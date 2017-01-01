@@ -143,7 +143,7 @@ else
     % Create the 4x4 matrix and shape it in a 16x1 vector. Repeat it for
     % every keypoint.
     M = repmat(reshape(W_T_c,12,1),1,size(key_h2,2));
-    
+    M_not_matched = repmat(reshape(W_T_c,12,1),1,size(keypoints_2,2));
     % STATE:
     % - keypoints in the initialization
     % - 3D corresponding points
@@ -151,7 +151,8 @@ else
     % - Camera pose for each point
 %     state = [key_h2(1:2,:); p_W_landmarks; key_h2(1:2,:); M];
     state = [[key_h2(1:2,:)', p_W_landmarks', M']; 
-        key_h2(1:2,:)', -ones(size(key_h2,2),3), M'];
+        keypoints_2', NaN(size(keypoints_2,2),3), M_not_matched'];
+%         key_h2(1:2,:)', -ones(size(key_h2,2),3), M'];
   
 end
 end
