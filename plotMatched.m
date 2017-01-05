@@ -1,6 +1,10 @@
-function [  ] = plotMatched( img, p1, p2, ransac )
+function [  ] = plotMatched( img, p1, p2, ransac, n_fig )
 
-figure;
+if nargin == 5
+    figure(n_fig);
+else
+    figure;
+end
 imshow(img); hold on;
 plot(p1(2,:),p1(1,:),'rx','linewidth',1.5); 
 plot(p2(2,:),p2(1,:),'go','linewidth',1.5);

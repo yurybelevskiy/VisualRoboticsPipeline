@@ -4,7 +4,7 @@ clear all;
 close all;
 clc;
 
-debug = 0;
+debug = 1;
 true_points = 0;
 matlab = 0;
 correct_matlab = 0;
