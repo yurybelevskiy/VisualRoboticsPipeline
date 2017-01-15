@@ -16,7 +16,5 @@ function [E, inlier_mask] = ourEstimateEssentialMatrix(p1, p2, K1, K2)
 
 % Compute the essential matrix from the fundamental matrix given K
 E = K2'*F*K1;
-disp('The essential matrix found is: ');
-E
 
 end

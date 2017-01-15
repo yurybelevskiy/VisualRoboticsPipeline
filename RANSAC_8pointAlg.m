@@ -13,16 +13,14 @@ function [ inlier_mask, best_F ] = RANSAC_8pointAlg( p1, p2 )
 %          - best_F (3x3): best fundamental matrix found.
 %
 % NOTE: The input points have already been matched.
-% https://www.ecse.rpi.edu/Homepages/qji/CV/cvfinalproject.pdf
-% https://github.com/aaronquek/Camera-Calibration-and-Fundamental-Matrix-Estimation-with-RANSAC/blob/master/code/ransac_fundamental_matrix.m
 
 % Start of the RANSAC algorithm
 % Initialization: number of iteration
-p = 0.99;       % Probability that a sample is free from outliers
-e = 0.5;        % Probability that a point is an outlier
-s = 8;          % Number of point of correspondence
-num_iterations = 2500;%log(1-p)/log(1-(1-e).^s);
-pixel_tolerance = 4;        % Hihger tolerance for initialization
+p = 0.99;                   % Probability that a sample is free from outliers
+e = 0.55;                   % Probability that a point is an outlier
+s = 8;                      % Number of point of correspondence
+num_iterations = log(1-p)/log(1-(1-e).^s);
+pixel_tolerance = 4;        % Higher tolerance for initialization
 
 % Initilization and pre-allocation of the varibles
 inlier_mask = zeros(1, size(p1, 2));

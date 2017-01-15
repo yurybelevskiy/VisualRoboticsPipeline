@@ -1,5 +1,5 @@
 function [R_C_W, t_C_W, inlier_mask] = ourRansacLocalization(...
-    query_keypoints, p_W_landmarks, K)
+    query_keypoints, p_W_landmarks, K, pixel_tolerance)
 % The variables query_keypoints and p_W_landmarks have already been
 % filtered trough the Lukas-Kanade Tracker. Thus, there is no need for
 % another matching operation.
@@ -7,19 +7,20 @@ function [R_C_W, t_C_W, inlier_mask] = ourRansacLocalization(...
 %   matched keypoints, 0 if the match is an outlier, 1 otherwise.
 
 % Parameters initialization.
-num_iterations = 500; %200
-pixel_tolerance = 6;
-k = 3;
+p = 0.99;                   % Probability that a sample is free from outliers
+e = 0.55;                   % Probability that a point is an outlier
+s = 3;                      % Number of point of correspondence
+num_iterations = log(1-p)/log(1-(1-e).^s);
 
 % Initialize RANSAC.
 inlier_mask = zeros(1, size(query_keypoints, 2));
-max_num_inliers_history = zeros(1, num_iterations);
+max_num_inliers_history = zeros(1, ceil(num_iterations));
 max_num_inliers = 0;
 
 % RANSAC iterations.
 for i = 1:num_iterations
     [landmark_sample, idx] = datasample(...
-        p_W_landmarks, k, 2, 'Replace', false);
+        p_W_landmarks, s, 2, 'Replace', false);
     keypoint_sample = query_keypoints(:, idx);
     
     normalized_bearings = K\[keypoint_sample; ones(1, 3)];
@@ -82,7 +83,7 @@ else
     query_keypoints = query_keypoints(:,inlier_mask>0);
     % Perform another iteration of RANSAC process
     [landmark_sample, idx] = datasample(...
-        p_W_landmarks, k, 2, 'Replace', false);
+        p_W_landmarks, s, 2, 'Replace', false);
     keypoint_sample = query_keypoints(:, idx);
     
     normalized_bearings = K\[keypoint_sample; ones(1, 3)];
@@ -133,5 +134,6 @@ else
     end
     
 end
+
 
 end

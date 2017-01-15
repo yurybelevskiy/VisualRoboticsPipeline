@@ -4,7 +4,7 @@ clear all;
 close all;
 clc;
 
-ds = 0; % 0: KITTI, 1: Malaga, 2: parking
+ds = 2; % 0: KITTI, 1: Malaga, 2: parking
 
 if ds == 0
     % need to set kitti_path to folder containing "00" and "poses"
@@ -40,50 +40,13 @@ else
     assert(false);
 end
 
-% Stereo initialization
-frame_1 = imread([kitti_path '/00/image_0/000000.png']);
-% frame_2 = imread([kitti_path '/00/image_1/000000.png']); % stereo
-frame_2 = imread([kitti_path '/00/image_0/000002.png']); % mono
-[initial_state, pose_init] = InitializeVO(frame_1,frame_2,K);
-old_state = initial_state;
-old_pose = [pose_init; 0,0,0,1]; % goes from CF3 to CF1 -> invert it!
-old_pose = inv(old_pose);
-pose_init = old_pose;
-
-movement = zeros(1,2);
-P_old = zeros(3,1);%old_pose(1:3,4);
-concatenated = old_pose;
-for k = 3:250
-    fprintf('Step %d - ',k);
-    previous_image = imread(sprintf('%s/00/image_0/%06d.png',kitti_path,k-1));
-    new_image = imread(sprintf('%s/00/image_0/%06d.png',kitti_path,k));
-    [new_state,new_pose] = processFrame(old_state,previous_image,new_image,K);
-    old_state = new_state;
-    new_pose = inv([new_pose; 0,0,0,1]);
-    new_pose_m = new_pose;
-%     [P_new, concatenated] = computeMovement(new_pose,old_pose,P_old);
-    concatenated = concatenated*new_pose;
-%     P_old = P_new;
-%     old_pose = concatenated;
-%     movement(k-3,:) = [P_new(1), P_new(3)]; 
-    movement(k-2,:) = [concatenated(1,4), concatenated(3,4)];
-    m(k-2,:) = [new_pose_m(1,end), new_pose_m(3,end)];
-    total_pose(k-2,:) = new_pose(1:3,4);
-    
-%     figure(10);
-%     plot(ground_truth(k,1),ground_truth(k,2),'b-o',m(k-2,1),m(k-2,2),'r-*');
-%     hold on;    
-%     pause(0.1);
+%% Bootstrap
+if ds == 0 || ds == 1
+    bootstrap_frames = [1, 3];
+elseif ds == 2
+    bootstrap_frames = [0,2];
 end
 
-n = size(total_pose,1);
-% p_W_estimate_aligned = alignEstimateToGroundTruth(ground_truth(1:n,:)', total_pose');
-
-
-figure
-plot(movement(:,1),movement(:,2),'-*');
-%% Bootstrap
-% need to set bootstrap_frames
 if ds == 0
     img0 = imread([kitti_path '/00/image_0/' ...
         sprintf('%06d.png',bootstrap_frames(1))]);
@@ -105,10 +68,19 @@ else
     assert(false);
 end
 
+[initial_state, pose_init] = InitializeVO(img0,img1,K);
+old_state = initial_state;
+old_pose = [pose_init; 0,0,0,1]; % goes from CF3 to CF1 -> invert it!
+old_pose = inv(old_pose);
+pose_init = old_pose;
 
 
 %% Continuous operation
 range = (bootstrap_frames(2)+1):last_frame;
+prev_img = img1;
+number_valid_landmarks = zeros(length(range),1);
+current_position = zeros(length(range),2);
+figure(1);
 for i = range
     fprintf('\n\nProcessing frame %d\n=====================\n', i);
     if ds == 0
@@ -123,8 +95,83 @@ for i = range
     else
         assert(false);
     end
-    % Makes sure that plots refresh.    
+       
+    [new_state,new_pose,error] = processFrame(old_state,prev_img,image,K,i);
+    if error < 0
+        fprintf('********************************************************************\n');
+        fprintf('ERROR!\nThe process has been interrupted at frame number %d since there are not any more valid points.\n',i-bootstrap_frames(2));
+        fprintf('********************************************************************\n');
+        break;
+    end
+    
+    % The result from P3P.m goes from the camera to the world, so it must
+    % be inverted.
+    new_pose_m = inv([new_pose; 0,0,0,1]);
+    current_position(i-bootstrap_frames(2),:) = [new_pose_m(1,end), new_pose_m(3,end)];
+    
+    %% Plot
+    % Create variables for the plot of the results
+    stop_old = find(isnan(old_state(:,5)),1,'first')-1;
+    stop_new = find(isnan(new_state(:,5)),1,'first')-1;
+    
+    old_keypoints = old_state(1:stop_old,1:2)';     % Keypoints in previous state
+    p_W_landmarks_old = old_state(1:stop_old,3:5)'; % Landmarks in previous state
+    p_W_landmarks_new = new_state(1:stop_new,3:5)'; % Landmarks in new state
+    if ~isempty(stop_new)
+        new_keypoints = new_state(1:stop_new,1:2)'; % Keypoints in the new state
+    else
+        new_keypoints = new_state(1:end,1:2)';      % Keypoints in the new state
+    end
+    
+    % Plot of the keypoints in the current frame
+    subplot(2,3,[1 2]);
+    imshow(image); hold on; 
+    title('Current frame');
+    plot(old_keypoints(1,:),old_keypoints(2,:),'gx','linewidth',1.25);
+    plot(new_keypoints(1,:),new_keypoints(2,:),'rx','linewidth',1.25);
+    hold off;
+    
+    % Plot of the trajectory over last 20 frames with the last triangulated
+    % points.
+    if i-bootstrap_frames(2) > 20
+        position_plot = current_position(i-bootstrap_frames(2)-20:i-bootstrap_frames(2),:);
+    else
+        position_plot = current_position(1:i-bootstrap_frames(2),:);
+    end
+    % Select only the landmarks in a certain range to make plot nicer.
+    idx = p_W_landmarks_new(3,:) < 150 & p_W_landmarks_new(1,:)<200;
+    p_W_plot = p_W_landmarks_new(:,idx);
+    
+    subplot(2,3,[3 6]);
+    plot(current_position(:,1),current_position(:,2),'bo');
+    
+    hold on; 
+    scatter(p_W_plot(1,:),p_W_plot(3,:),'MarkerEdgeColor',[0 .5 .5],'MarkerFaceColor',[0 .4 .4]); 
+    hold off;
+    % Adjust plot settings
+    title('Camera position - (x,z) plane');
+    grid on; 
+    dummy_x = abs(mean(p_W_plot(1,:))); 
+    dummy_y = abs(mean(p_W_plot(3,:)));
+    xlim([current_position(i-bootstrap_frames(2),1)-dummy_x,...
+        current_position(i-bootstrap_frames(2),1)+dummy_x]);
+    ylim([current_position(i-bootstrap_frames(2),2)-dummy_y,...
+        current_position(i-bootstrap_frames(2),2)+dummy_y]);
+    xlabel('x [m]'); ylabel('z [m]');
+    
+    % Plot of size of number of keypoints triangulated.
+    % Save the number of valid 3D points
+    number_valid_landmarks(i-bootstrap_frames(2)) = size(p_W_landmarks_new,2);
+    subplot(2,3,[4 5]);
+    plot(1:i-bootstrap_frames(2),number_valid_landmarks(1:i-bootstrap_frames(2)));
+    hold off;
+    axis tight;
+    grid on;
+    xlabel('Number of frame'); ylabel('# of valid landmarks');
+    title('# of valid landmarks - overall frames');
     pause(0.01);
     
+    % Update variables
+    old_state = new_state;
     prev_img = image;
 end
